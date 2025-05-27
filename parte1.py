@@ -1,13 +1,14 @@
 import csv
 import matplotlib.pyplot as plt
 import numpy as np
+from scipy.stats import poisson
 
 # Parte 1
 contadorRows = 0
 valores = []
 
 # Lectura de todos los valores
-with open('cancelaciones.csv', newline='') as csvfile:
+with open('Tarea2-PE/cancelaciones.csv', newline='') as csvfile:
     spamreader = csv.reader(csvfile, delimiter=',')
     next(spamreader)  # Saltar encabezado
     for row in spamreader:
@@ -92,3 +93,30 @@ plt.xticks(range(min_valor, max_valor + 1))
 plt.grid(axis='y', linestyle='--', alpha=0.4)
 plt.tight_layout()
 plt.show()
+
+
+# Parte 5 - Poisson
+media_cancelaciones = round(esperanza)  # Usamos la esperanza como parámetro lambda
+print(f"Lambda estimado (esperanza redondeada): {media_cancelaciones}")
+
+# Generar valores posibles para Poisson
+x_vals_poisson = np.arange(min_valor, max_valor + 1)
+pmf_poisson = poisson.pmf(x_vals_poisson, mu=media_cancelaciones) * contadorRows  # Escalar para que coincida con frecuencias
+
+# Histograma con superposición de Poisson
+plt.hist(valores, bins=bins, color='#ffc2d4', edgecolor='black', label='Datos reales')
+plt.plot(x_vals_poisson, pmf_poisson, 'o-', color='#c9184a', label=f'Poisson λ={media_cancelaciones}')
+plt.title('Cancelaciones diarias vs Distribución de Poisson')
+plt.xlabel('Cantidad de cancelaciones')
+plt.ylabel('Frecuencia')
+plt.legend()
+plt.grid(axis='y', linestyle='--', alpha=0.4)
+plt.tight_layout()
+plt.show()
+
+# Parte 6 - Probabilidades bajo Poisson
+prob_menor_5 = poisson.cdf(4, mu=media_cancelaciones)
+prob_mayor_15 = 1 - poisson.cdf(15, mu=media_cancelaciones)
+
+print(f"P(X < 5): {round(prob_menor_5, 4)}")
+print(f"P(X > 15): {round(prob_mayor_15, 4)}")

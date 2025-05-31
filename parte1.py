@@ -2,13 +2,17 @@ import csv
 import matplotlib.pyplot as plt
 import numpy as np
 from scipy.stats import poisson
+from collections import Counter
 
 # Parte 1
 contadorRows = 0
 valores = []
 
 # Lectura de todos los valores
-with open('Tarea2-PE/cancelaciones.csv', newline='') as csvfile:
+valores = []
+contadorRows = 0
+
+with open('cancelaciones.csv', newline='') as csvfile:
     spamreader = csv.reader(csvfile, delimiter=',')
     next(spamreader)  # Saltar encabezado
     for row in spamreader:
@@ -20,36 +24,24 @@ with open('Tarea2-PE/cancelaciones.csv', newline='') as csvfile:
         except ValueError:
             continue
 
-# Valor máximo de cancelaciones
-max_valor = max(valores) if valores else 0
+# Contar ocurrencias de cada cantidad de cancelaciones
+cancelaciones_por_valor = Counter(valores)
+valores_ordenados = sorted(cancelaciones_por_valor.keys())
 
-# Crea un array para contar la cantidad de ocurrencias de cada cantidad de cancelaciones
-cancelaciones_por_valor = [0] * (max_valor + 1)
-
-# Recorre los valores y cuenta las ocurrencias
-for valor in valores:
-    cancelaciones_por_valor[valor] += 1
-
-# Calcula la distribución acumulada
-acumulado = 0
-distribucion_acumulada = []
-for i in range(max_valor + 1):
-    probabilidad = cancelaciones_por_valor[i] / contadorRows if contadorRows > 0 else 0
-    acumulado += probabilidad
-    distribucion_acumulada.append((round(acumulado, 4)))
-
-# Escribe probabilidades y distribución acumulada en el archivo de salida
+acumulado = 0.0
 with open('probabilidades.csv', 'w', newline='') as csvfile:
     spamwriter = csv.writer(csvfile, delimiter='|')
     spamwriter.writerow(['valor', 'cant. cancelaciones', 'probabilidad', 'dist. acumulada'])
-    for i in range(max_valor + 1):
-        if cancelaciones_por_valor[i] == 0:
-            continue
-        probabilidad = cancelaciones_por_valor[i] / contadorRows if contadorRows > 0 else 0
-        spamwriter.writerow([i, cancelaciones_por_valor[i], round(probabilidad, 4), distribucion_acumulada[i]])
+    
+    for valor in valores_ordenados:
+        cantidad = cancelaciones_por_valor[valor]
+        probabilidad = cantidad / contadorRows
+        acumulado += probabilidad
+        spamwriter.writerow([valor, cantidad, round(probabilidad, 4), round(acumulado, 4)])
 
 # Parte 2
 # Cálculo de esperanza
+max_valor = max(cancelaciones_por_valor) if cancelaciones_por_valor else 0
 esperanza = sum(i * cancelaciones_por_valor[i] for i in range(max_valor + 1)) / contadorRows if contadorRows > 0 else 0
 print(f'Esperanza: {round(esperanza, 4)}')
 
@@ -79,12 +71,11 @@ else:
     plt.show()
 
 # Parte 4
-# Histograma
+# Crea bins para que el formato del histograma quede mejor
 min_valor = min(valores)
 max_valor = max(valores)
 bins = np.arange(min_valor - 0.5, max_valor + 1.5, 1) 
 
-# Graficar histograma alineado
 plt.hist(valores, bins=bins, color='#ffc2d4', edgecolor='black')
 plt.title('Histograma de cancelaciones')
 plt.xlabel('Cantidad de cancelaciones')
@@ -94,18 +85,13 @@ plt.grid(axis='y', linestyle='--', alpha=0.4)
 plt.tight_layout()
 plt.show()
 
-
 # Parte 5 - Poisson
-media_cancelaciones = round(esperanza)  # Usamos la esperanza como parámetro lambda
-print(f"Lambda estimado (esperanza redondeada): {media_cancelaciones}")
-
-# Generar valores posibles para Poisson
 x_vals_poisson = np.arange(min_valor, max_valor + 1)
-pmf_poisson = poisson.pmf(x_vals_poisson, mu=media_cancelaciones) * contadorRows  # Escalar para que coincida con frecuencias
+pmf_poisson = poisson.pmf(x_vals_poisson, mu=round(esperanza, 4)) * contadorRows  # Escalar para que coincida con frecuencias
 
 # Histograma con superposición de Poisson
 plt.hist(valores, bins=bins, color='#ffc2d4', edgecolor='black', label='Datos reales')
-plt.plot(x_vals_poisson, pmf_poisson, 'o-', color='#c9184a', label=f'Poisson λ={media_cancelaciones}')
+plt.plot(x_vals_poisson, pmf_poisson, 'o-', color='#c9184a', label=f'Poisson λ={round(esperanza, 4)}')
 plt.title('Cancelaciones diarias vs Distribución de Poisson')
 plt.xlabel('Cantidad de cancelaciones')
 plt.ylabel('Frecuencia')
@@ -115,8 +101,8 @@ plt.tight_layout()
 plt.show()
 
 # Parte 6 - Probabilidades bajo Poisson
-prob_menor_5 = poisson.cdf(4, mu=media_cancelaciones)
-prob_mayor_15 = 1 - poisson.cdf(15, mu=media_cancelaciones)
+prob_menor_5 = poisson.cdf(4, mu=round(esperanza, 4))
+prob_mayor_15 = 1 - poisson.cdf(15, mu=round(esperanza, 4))
 
 print(f"P(X < 5): {round(prob_menor_5, 4)}")
 print(f"P(X > 15): {round(prob_mayor_15, 4)}")
